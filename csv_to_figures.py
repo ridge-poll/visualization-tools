@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from scipy.stats import ttest_ind
+from scipy.stats import ttest_rel
 import tkinter as tk
 from tkinter import filedialog
 
@@ -24,18 +24,32 @@ conditions = list(pd.unique(df["Condition"]))
 treatments = [c for c in conditions if c != reference]
 order = [reference] + treatments
 
+# Force pairs to exist
+all_pairs = pd.MultiIndex.from_product(
+    [df["Recording"].unique(), df["Condition"].unique()],
+    names=["Recording", "Condition"]
+)
+
 # Summarize data
 summary = df.groupby(["Recording", "Condition"]).agg(
     Amplitude=("MaxAmp1", "mean"),
     Duration=("Duration1", "mean"),
+    ShiftSlope=("ShiftSlope1", "mean"),
     AUC=("AUC1", "mean"),
-    EventCount=("Latency1", "count"),
+    EventCount=("Duration1", "count"),
     Start=("Start_s", "first"),
     End=("End_s", "first")
-).reset_index()
+).reindex(all_pairs).reset_index()
+
+
+# Fix event count (missing -> 0 events)
+summary["EventCount"] = summary["EventCount"].fillna(0)
 
 # Find rate -> events over time 
-summary["Rate"] = summary["EventCount"] / (summary["End"] - summary["Start"])
+duration = summary["End"] - summary["Start"]
+summary["Rate"] = np.where((summary["EventCount"] > 0) &
+                           (duration > 0),summary["EventCount"] / duration,0)
+
 # Find normalized AUC -> AUC over amplitude (currently not wanted by Kojo)
 summary["NormAUC"] = summary["AUC"] / summary["Amplitude"]
 
@@ -43,7 +57,7 @@ summary["NormAUC"] = summary["AUC"] / summary["Amplitude"]
 # Reshape for plotting
 long_df = summary.melt(
     id_vars=["Recording", "Condition"],
-    value_vars=["Amplitude", "Duration", "AUC", "Rate"],
+    value_vars=["Amplitude", "Duration", "ShiftSlope", "AUC", "Rate"],
     var_name="Metric",
     value_name="Value"
 )
@@ -58,12 +72,14 @@ for cond, color in zip(treatments, base_colors):
 
 
 # Plotting
-metrics = ["Rate", "Amplitude", "Duration", "AUC"]
-fig, axes = plt.subplots(1, len(metrics), figsize=(16, 4))
+metrics = ["Rate", "Amplitude", "Duration", "ShiftSlope", "AUC"]
+
+fig, axes = plt.subplots(1, len(metrics), figsize=(12, 3))
 labels = ["Rate of SDs (events/sec)",
           "Negative DC Shift (mV)",
           "SD Duration (sec)",
-          "Area under the curve (mV*sec)"]
+          "Steepest Slope of SD (mV/sec)",
+          "Area Under the Curve (mV*sec)"]
 
 for ax, m, lbl in zip(axes, metrics, labels):
     subset = long_df[long_df["Metric"] == m]
@@ -89,16 +105,32 @@ for ax, m, lbl in zip(axes, metrics, labels):
         if len(values) > 0:
             ax.hlines(values.mean(), i - 0.2, i + 0.2, colors="black")
 
+
     # Stats
-    control_vals = subset[subset["Condition"] == reference]["Value"]
-
     p_text = []
-    for cond in treatments:
-        group_vals = subset[subset["Condition"] == cond]["Value"]
 
-        if len(control_vals) > 1 and len(group_vals) > 1:
-            _, pval = ttest_ind(control_vals, group_vals, nan_policy="omit")
-            p_text.append(f"p={pval:.3f}")
+    control_df = subset[subset["Condition"] == reference][["Recording", "Value"]]
+    for cond in treatments:
+        group_df = subset[subset["Condition"] == cond][["Recording", "Value"]]
+
+        merged = pd.merge(
+            control_df,
+            group_df,
+            on="Recording",
+            suffixes=("_control", "_treat")
+        )
+        merged = merged.dropna(subset=["Value_control", "Value_treat"])
+        
+
+        if len(merged) > 1:
+            _, pval = ttest_rel(
+                merged["Value_control"],
+                merged["Value_treat"],
+                nan_policy="omit"
+            )
+            p_text.append(f"{cond}: p={pval:.3f}")
+        else:
+            p_text.append(f"{cond}: n too small")
 
     ax.set_title(f"{m}\n" + "\n".join(p_text))
 
