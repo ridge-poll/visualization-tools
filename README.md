@@ -8,20 +8,22 @@ This repository is intended to grow over time as a collection of reusable plotti
 
 ## Current Features
 
-- Load CSV data via file picker
-- Group data by experimental condition
+- Load CSV data (file picker)
+- Automatically detect experimental conditions
+- Group data by recording and condition
 - Compute summary metrics:
   - Amplitude
   - Duration
   - Area under the curve (AUC)
   - Event rate
-- Automatic condition detection
 - Reference-based comparisons (first condition in dataset)
-- Statistical testing (t-tests vs reference)
+- Paired statistical testing (t-tests)
 - Swarm plot visualizations with mean overlays
 
 ---
 
+
+<img src="assets/example_spreadsheet.png" width="500" height="250">
 
 ## Installation
 ```bash
