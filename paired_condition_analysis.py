@@ -72,6 +72,7 @@ labels = [
 ]
 
 fig, axes = plt.subplots(1, len(metrics), figsize=(14, 4))
+fig.suptitle(f"Zebrafish SDs in Hypoosmotic Solution: {cond}", fontsize=14, fontweight="bold")
 
 for ax, m, lbl in zip(axes, metrics, labels):
     subset = long_df[long_df["Metric"] == m]
@@ -96,10 +97,11 @@ for ax, m, lbl in zip(axes, metrics, labels):
         ax.bar(
             i,
             means[i],
+            width=0.4,
             color=my_palette[cond],
             alpha=0.25,
             edgecolor=my_palette[cond],
-            linewidth=1.5
+            linewidth=2
         )
 
     # Error bars
@@ -143,7 +145,7 @@ for ax, m, lbl in zip(axes, metrics, labels):
                 merged["Value_treat"],
                 nan_policy="omit"
             )
-            p_text.append(f"{cond}: p={pval:.3f}")
+            p_text.append(f"p={pval:.3f}")
         else:
             p_text.append(f"{cond}: n too small")
 
@@ -151,7 +153,11 @@ for ax, m, lbl in zip(axes, metrics, labels):
     ax.set_xticks(range(len(order)))
     ax.set_xticklabels(order)
     ax.set_ylabel(lbl)
-    ax.set_title(f"{m}\n" + "\n".join(p_text), fontsize=10)
+    ax.set_title(
+    f"{m}\n" + "\n".join(p_text),
+    fontsize=10,
+    fontweight="bold"
+)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)

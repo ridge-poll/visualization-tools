@@ -39,21 +39,16 @@ summary = df.groupby(["Recording", "Condition"]).agg(
 # Fix event count (missing -> 0 events)
 summary["EventCount"] = summary["EventCount"].fillna(0)
 
-print(summary["EventCount"])
-
 # Find rate -> events over time 
 duration = summary["End"] - summary["Start"]
 summary["Rate"] = np.where((summary["EventCount"] > 0) &
                            (duration > 0),summary["EventCount"] / duration,0)
 
-print(summary["Rate"])
-
 # Find normalized AUC -> AUC over amplitude (currently not wanted by Kojo)
 summary["NormAUC"] = summary["AUC"] / summary["Amplitude"]
 
-#############################################
 
-
+# Build delta frames
 delta_rows = []
 
 for rec in summary["Recording"].unique():
@@ -68,7 +63,6 @@ for rec in summary["Recording"].unique():
 
     for _, row in rec_df.iterrows():
         cond = row["Condition"]
-
         if cond == reference:
             continue
 
@@ -84,7 +78,6 @@ for rec in summary["Recording"].unique():
 delta_df = pd.DataFrame(delta_rows)
 
 
-#############################################
 
 # Reshape for plotting
 delta_long = delta_df.melt(
@@ -92,7 +85,6 @@ delta_long = delta_df.melt(
     var_name="Metric",
     value_name="Value"
 )
-
 
 
 # Colors
@@ -139,10 +131,11 @@ for ax, m, lbl in zip(axes, metrics, labels):
         ax.bar(
             i,
             means[i],
+            width=0.4,
             color=my_palette[cond],
             alpha=0.25,
             edgecolor=my_palette[cond],
-            linewidth=1.5
+            linewidth=2
         )
 
     # Error bars
@@ -181,7 +174,11 @@ for ax, m, lbl in zip(axes, metrics, labels):
     ax.set_xticks(range(len(treatments)))
     ax.set_xticklabels(treatments)
     ax.set_ylabel(lbl)
-    ax.set_title(f"{m}\n" + "\n".join(p_text), fontsize=10)
+    ax.set_title(
+        f"{m}\n" + "\n".join(p_text),
+        fontsize=10,
+        fontweight="bold"
+    )
 
     # Reference line (no effect)
     ax.axhline(0, linestyle="--", color="gray", linewidth=1)
@@ -189,6 +186,6 @@ for ax, m, lbl in zip(axes, metrics, labels):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
-plt.suptitle("SD Properties in Zebrafish\n(Δ from Control)", fontsize=14)
+fig.suptitle("SD Properties in Zebrafish\n(Δ from Control)", fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.show()

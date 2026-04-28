@@ -1,37 +1,147 @@
-# Visualization Tools
+# Experimental Event Analysis Toolkit
 
-A Python toolbox for data visualization and basic analysis of experimental datasets.
+A Python toolbox for analyzing event-based experimental recordings and generating publication-quality visualizations.
 
-This repository is intended to grow over time as a collection of reusable plotting and analysis tools.
+This repository supports workflows for:
+- condition-level event rate analysis
+- paired comparisons within recordings
+- control-normalized (delta) analysis
+- statistical testing and visualization of experimental conditions
+
+Designed for electrophysiology and imaging datasets where events are sparse and structured across recording epochs.
 
 ---
 
-## Current Features
+## Analysis Pipelines
 
-- Load CSV data (file picker)
-- Automatically detect experimental conditions
-- Group data by recording and condition
-- Compute summary metrics:
+### 1. Condition-Level Event Analysis (`paired_condition_analysis.py`)
+
+This script performs within-dataset analysis across conditions.
+
+**Key functions:**
+- Computes event-derived metrics per recording and condition
+- Calculates:
+  - Event rate (events/sec)
   - Amplitude
   - Duration
-  - Area under the curve (AUC)
-  - Event rate
-- Reference-based comparisons (first condition in dataset)
-- Paired statistical testing (t-tests)
-- Swarm plot visualizations with mean overlays
+  - Area under curve (AUC)
+- Performs paired statistical comparisons vs a reference condition
+- Produces raw-value visualizations with:
+  - mean ± SEM
+  - individual data points
+  - significance annotations
 
 ---
 
+### 2. Paired Delta Analysis (`paired_delta_analysis.py`)
+
+This script computes control-normalized differences within each recording.
+
+**Key functions:**
+- Computes within-recording differences relative to control:
+  - Δ Rate
+  - Δ Amplitude
+  - Δ Duration
+  - Δ AUC
+- Performs one-sample statistical tests against zero
+- Focuses on effect size rather than absolute values
+- Produces clearer cross-condition comparisons
+- Includes baseline reference line at zero
+
+---
+
+## Features
+
+- Interactive CSV file loading (file picker GUI)
+- Automatic grouping by:
+  - Recording
+  - Condition
+- Handles zero-event recordings explicitly when valid windows exist
+- Derived metrics:
+  - Event rate
+  - Optional AUC normalization
+- Statistical testing:
+  - Paired t-tests (condition-level analysis)
+  - One-sample t-tests (delta analysis)
+- Publication-style plots:
+  - bar plots with SEM
+  - jittered raw data overlays
+  - consistent condition color mapping
+  - significance annotations
+
+---
+
+## Example Output
 
 <img src="assets/example_spreadsheet.png" width="500" height="250">
 
+---
+
 ## Installation
+
 ```bash
-pip install pandas numpy matplotlib seaborn scipy
+pip install pandas numpy matplotlib scipy
 ```
 
+
 ## Usage
-Run the script:
+
+### Condition-level Analysis
+
 ```bash
-python csv_to_figures.py
+python paired_condition_analysis.py
 ```
+This script:
+- Loads a CSV file via file picker
+- Computes summary metrics per recording and condition
+- Performs paired statistical comparisons against a reference condition
+- Generates multi-panel plots for all metrics
+
+
+### Paired Delta Analysis
+
+```bash
+python paired_delta_analysis.py
+```
+This script:
+- Loads a CSV file via file picker
+- Converts all metrics into Δ (difference-from-control) values
+- Performs one-sample t-tests against zero
+- Produces effect-size centered visualizations
+
+*In effect, these two scripts produce the same p-values. The first compares a single treatment to the control, the second provides visualization for multiple treatments compared to their respective paired control.*
+
+
+## Input Data Format
+Input CSV files must contain event-level data with the following categories:
+
+| Recording | Condition | Start_s | End_s | MaxAmp1 | Duration1 | AUC1 |
+|----------|----------|--------|-------|--------|----------|------|
+| R1a | ACSF | 1200 | 2000 | 4.67 | 194.54 | 694.75 |
+| R1a | ACSF | 1200 | 2000 | 3.14 | 119.18 | 273.35 |
+| R1a | ACSF | 1200 | 2000 | 2.33 | 83.72 | 142.24 |
+| R1a | H-40 | 2000 | 2800 | 3.04 | 49.54 | 92.43 |
+| R1a | H-40 | 2000 | 2800 | 5.25 | 128.40 | 463.19 |
+| R2a | ACSF | 1230 | 1736 | 2.83 | 88.96 | 141.08 |
+| R2a | H-40 | 1850 | 2400 | 2.04 | 22.24 | 26.33 |
+| R3a | ACSF | 1200 | 2000 | 2.14 | 94.62 | 118.76 |
+| R3a | H-40 | 2000 | 2800 | 3.18 | 121.34 | 212.47 |
+| R4a | ACSF | 1000 | 1600 | 2.48 | 111.27 | 151.23 |
+| R4a | H-40 | 1600 | 2200 | 3.02 | 131.42 | 218.66 |
+| R1b | ACSF | 0 | 480 | 10.43 | 3.00 | 13.38 |
+| R1b | Mannitol | 480 | 1000 | 22.19 | 29.78 | 380.54 |
+| R2b | ACSF | 0 | 840 | 39.31 | 245.08 | 6350.23 |
+| R2b | Mannitol | 840 | 1500 | 33.35 | 86.56 | 1470.91 |
+| R3b | ACSF | 0 | 600 | 30.73 | 36.68 | 566.57 |
+| R3b | Mannitol | 600 | 1473 | 20.57 | 163.04 | 1720.73 |
+| R4b | ACSF | 0 | 780 | 147.30 | 163.84 | 13799.28 |
+| R4b | Mannitol | 780 | 1890 | NaN | NaN | NaN |
+| R5b | ACSF | 660 | 1350 | 7.28 | 181.52 | 901.82 |
+| R5b | Mannitol | 0 | 660 | NaN | NaN | NaN |
+
+Notes
+- Recordings must have unique identifiers so conditions can be paired correctly.
+- Zero-event conditions should still be included if a recording window exists.
+- In these cases, include:
+  - valid Start_s and End_s
+  - NaN for event-derived values (e.g., amplitude, duration, AUC)
