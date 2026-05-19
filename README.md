@@ -7,6 +7,7 @@ This repository supports workflows for:
 - paired comparisons within recordings
 - control-normalized (delta) analysis
 - statistical testing and visualization of experimental conditions
+- statistical power and sample-size estimation
 
 Designed for electrophysiology and imaging datasets where events are sparse and structured across recording epochs.
 
@@ -50,6 +51,29 @@ This script computes control-normalized differences within each recording.
 
 ---
 
+### 3. Statistical Power Analysis (`power_analysis.py`)
+
+This script estimates statistical power and required sample size for paired experiments.
+
+**Key functions:**
+- Uses the same paired-recording framework as the analysis scripts
+- Computes paired treatment–control differences for:
+  - Rate
+  - Amplitude
+  - Duration
+  - AUC
+- Calculates:
+  - Current p-value
+  - Estimated statistical power
+  - Total recordings required to reach target power
+  - Additional recordings needed
+- Uses paired t-test power calculations (`statsmodels`)
+- Produces:
+  - color-coded summary tables
+  - power-vs-sample-size curves
+
+---
+
 ## Features
 
 - Interactive CSV file loading (file picker GUI)
@@ -63,6 +87,9 @@ This script computes control-normalized differences within each recording.
 - Statistical testing:
   - Paired t-tests (condition-level analysis)
   - One-sample t-tests (delta analysis)
+- Statistical power analysis:
+  - achieved power estimation
+  - required sample-size estimation
 - Publication-style plots:
   - bar plots with SEM
   - jittered raw data overlays
@@ -80,9 +107,8 @@ This script computes control-normalized differences within each recording.
 ## Installation
 
 ```bash
-pip install pandas numpy matplotlib scipy
+pip install pandas numpy matplotlib scipy statsmodels
 ```
-
 
 ## Usage
 
@@ -111,6 +137,28 @@ This script:
 
 *In effect, these two scripts produce the same p-values. The first compares a single treatment to the control, the second provides visualization for multiple treatments compared to their respective paired control.*
 
+### Power Analysis
+
+```bash
+python power_analysis.py
+```
+
+This script:
+- Loads a CSV file via file picker
+- Computes paired treatment–control differences
+- Estimates current statistical power
+- Calculates total and additional recordings needed to reach target power
+- Produces:
+  - console summaries
+  - color-coded result tables
+  - power curves for each metric
+
+Default settings:
+- α = 0.05
+- target power = 0.80
+- preferred reference condition = `ACSF`
+
+If `ACSF` is absent, the script automatically selects the condition with the greatest paired coverage and reports this choice.
 
 ## Input Data Format
 Input CSV files must contain event-level data with the following categories:
@@ -145,3 +193,4 @@ Notes
 - In these cases, include:
   - valid Start_s and End_s
   - NaN for event-derived values (e.g., amplitude, duration, AUC)
+- Event rate is computed using non-NaN event rows and recording-window duration (`End_s − Start_s`).
